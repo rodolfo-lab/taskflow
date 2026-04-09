@@ -1,30 +1,26 @@
 import { Categoria } from '../models/categoria'
+import { CategoriaModelo } from '../models/categoriaModelo'
 
 export class CategoriaRepository {
 
-    async criar(dados: any) {
-
+    async criar(dados: any){
         const categoria = new Categoria(dados)
-        return await categoria.save()
+        await categoria.save()
     }
 
-    async listarTodos() {
-
+    async listarTodos(): Promise<CategoriaModelo[] | null> {
         return await Categoria.find()
     }
 
-    async buscarPorId(id: string) {
-
+    async buscarPorId(id: string): Promise<CategoriaModelo | null> {
         return await Categoria.findById(id)
     }
 
     async atualizar(id: string, dados: any) {
-
-        return await Categoria.findByIdAndUpdate(id, dados, {new: true})
+        await Categoria.findByIdAndUpdate(id, dados, {new: true})
     }
 
     async deletar(id: string) {
-
-        return await Categoria.findByIdAndDelete(id)
+        await Categoria.findByIdAndDelete(id)
     }
 }

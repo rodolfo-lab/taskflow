@@ -1,18 +1,16 @@
 import { erroValidacaoComMensagem } from '../errors/errorHandling'
 import { TarefaRepository } from '../repositories/tarefaRepository'
 import { UsuarioService } from './usuarioService'
-import type { Response } from 'express'
 
 const tarefaRepository = new TarefaRepository()
 const usuarioService = new UsuarioService()
 
 export class TarefaService {
 
-    async criarTarefa(dados: any, res: Response) {
+    async criarTarefa(dados: any) {
 
         if (!dados.titulo || !dados.usuarioId) {
-            erroValidacaoComMensagem(res, 'Título e usuário são obrigatórios' )
-            return false
+            throw new Error('Título e usuário são obrigatórios' )
         }
         
         return await tarefaRepository.criar(dados)
@@ -35,72 +33,45 @@ export class TarefaService {
 
     }
 
-    async obterTarefaPorId(id: string, res: Response) {
+    async obterTarefaPorId(id: string) {
 
         if (!id) {
-            erroValidacaoComMensagem(res, 'O parâmetro id é obrigatório' )
-            return {}
+            throw new Error('O parâmetro id é obrigatório' )
         }
 
         const tarefa = await tarefaRepository.buscarPorId(id)
 
         if (!tarefa){
-            erroValidacaoComMensagem(res, 'Tarefa não encontrada' )
-            return tarefa
+            throw new Error('Tarefa não encontrada' )
         }
 
         return tarefa
     }
 
-    async atualizarTarefa(id: string, dados: any, res: Response) {
+    async atualizarTarefa(id: string, dados: any) {
 
         if (!id) {
-            erroValidacaoComMensagem(res, 'O parâmetro id é obrigatório' )
-            return
+            throw new Error('O parâmetro id é obrigatório' )
         }
-
 
         dados.dataAlteracao = Date()
+        await tarefaRepository.atualizar(id, dados)
+     }
 
-        const tarefa = await tarefaRepository.atualizar(id, dados)
-        if (!tarefa) {
-            erroValidacaoComMensagem(res, 'Erro ao atualizar tarefa' )
-            return
+    async deletarTarefa(id: string) {
 
-        }
-
-        return tarefa
-    }
-
-    async deletarTarefa(id: string, res: Response) {
-
-        const tarefa = await this.obterTarefaPorId(id, res) as any
-        if (!tarefa)
-            return
-        const usuario =  usuarioService.obterUsuarioPorId(String(tarefa.usuarioId), res)
-
-        if (!usuario)
-            return
-
+        const tarefa = await this.obterTarefaPorId(id) as any
+        usuarioService.obterUsuarioPorId(String(tarefa.usuarioId))
         await tarefaRepository.deletar(id)
 
     }
 
-    async atualizarStatus(id: string, status: string, res: Response) {
+    async atualizarStatus(id: string, status: string) {
 
         if (!id){
-            erroValidacaoComMensagem(res, 'O parâmetro id é obrigatório')
-            return
+            throw new Error('O parâmetro id é obrigatório' )
         }
-
-        const tarefa = await tarefaRepository.atualizar(id, { status, dataAlteracao: Date() })
-
-        if (!tarefa) {
-            erroValidacaoComMensagem(res, 'Tarefa não encontrada')
-            return
-        }
-
-        return tarefa
+        await tarefaRepository.atualizar(id, { status, dataAlteracao: Date() })
 
     }
 }

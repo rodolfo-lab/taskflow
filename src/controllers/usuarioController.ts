@@ -6,70 +6,46 @@ import { UsuarioAutorizado } from '../services/autorizacaoServices'
 
 const usuarioService = new UsuarioService()
 
-export async function novoUsuario(req: Request, res: Response) {
+async function novoUsuario(req: Request, res: Response) {
 
-    try {
-        const usuario = await usuarioService.criarUsuario(req.body.nome, req.body.email, req.body.senha, res)
-        if(!usuario)
-            return
-        res.status(201).json({ header: `api/v1/usuarios/${usuario.id}` })
+    const usuarioId = await usuarioService.criarUsuario(req.body.nome, req.body.email, req.body.senha)
+        res.status(201).json({ header: `api/v1/usuarios/${usuarioId}` })
 
-    } catch (error: any) {
-        erroValidacaoComMensagem(res, error.message)
-    }
 }
 
-export async function obterListaUsuarios(req: Request, res: Response) {
+async function obterListaUsuarios(req: Request, res: Response) {
 
-    try {
         const usuarios = await usuarioService.listarUsuarios()
         res.status(200).json(usuarios)
 
-    } catch (error: any) {
-        erroValidacaoComMensagem(res, error.message)
-    }
 }
 
-export async function obterUsuarioPorId(req: authorizationInfoRequest, res: Response) {
+async function obterUsuarioPorId(req: authorizationInfoRequest, res: Response) {
 
-    try {
         if (!UsuarioAutorizado(req.user.id, String(req.params.id), res))
             return
-        const usuario = await usuarioService.obterUsuarioPorId(String(req.params.id), res)
-        
-        if (!usuario)
-            return
-        
+        const usuario = await usuarioService.obterUsuarioPorId(String(req.params.id))
         res.status(200).json(usuario)
 
-    } catch (error: any) {
-        erroValidacaoComMensagem(res, error.message)
-    }
 }
 
-export async function atualizarUsuario(req: authorizationInfoRequest, res: Response) {
+async function atualizarUsuario(req: authorizationInfoRequest, res: Response) {
 
-    try {
         if (!UsuarioAutorizado(req.user.id, String(req.params.id), res))
             return
-        const usuario = await usuarioService.atualizarUsuario(String(req.params.id), req.body, res)
+        const usuario = await usuarioService.atualizarUsuario(String(req.params.id), req.body)
         res.status(200).json(usuario)
 
-    } catch (error: any) {
-        erroValidacaoComMensagem(res, error.message)
-    }
 }
 
-export async function deletarUsuario(req: authorizationInfoRequest, res: Response) {
+async function deletarUsuario(req: authorizationInfoRequest, res: Response) {
 
-    try {
         if (!UsuarioAutorizado(req.user.id, String(req.params.id), res))
             return
 
-        await usuarioService.deletarUsuario(String(req.params.id), res)
-        res.status(204).send()
+        await usuarioService.deletarUsuario(String(req.params.id))
+        res.status(204).json('Usuario deletado com sucesso')
 
-    } catch (error: any) {
-        erroValidacaoComMensagem(res, error.message)
-    }
 }
+
+export { novoUsuario, obterListaUsuarios, obterUsuarioPorId, atualizarUsuario, deletarUsuario }

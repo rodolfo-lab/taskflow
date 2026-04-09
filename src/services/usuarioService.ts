@@ -1,66 +1,61 @@
 import bcrypt from 'bcryptjs'
 import { UsuarioRepository } from '../repositories/usuarioRepository'
-import { erroValidacaoComMensagem, tratarErroParaJson } from '../errors/errorHandling'
-import type { Response } from 'express'
+import { UsuarioModelo } from '../models/usuarioModelo'
 
 const usuarioRepository = new UsuarioRepository()
 
 export class UsuarioService {
 
-    async criarUsuario(nome: string, email: string, senha: string, res: Response) {
+    async criarUsuario(nome: string, email: string, senha: string): Promise<string> {
         
         if (!nome || !email || !senha){
-            erroValidacaoComMensagem(res, 'O parâmetro id é obrigatório' )
-            return
+            throw new Error('Nome, email e senha são obrigatórios para criar um usuário')
         }
-        
-        const senhaHash = await bcrypt.hash(senha, 10)
-        return await usuarioRepository.criar({ nome, email, senha: senhaHash })
+
+        try {
+            const senhaHash = await bcrypt.hash(senha, 10)
+            const usuario = await usuarioRepository.criar({ nome, email, senha: senhaHash })
+            return usuario.id
+            
+        } catch {
+            throw new Error('Erro ao criar usuário - Nome, email e senha são obrigatórios para criar um usuário')
+        }
     }
 
-    async listarUsuarios() {
+    async listarUsuarios(): Promise<UsuarioModelo[]> {
         return await usuarioRepository.listarTodos()
     }
 
-    async obterUsuarioPorId(id: string, res: Response) {
+    async obterUsuarioPorId(id: string): Promise<UsuarioModelo> {
 
         if (!id){
-            erroValidacaoComMensagem(res, 'O parâmetro id é obrigatório' )
-            return {}
+            throw new Error('O parâmetro id é obrigatório' )
         }
 
         const usuario = await usuarioRepository.buscarPorId(id)
         
         if (!usuario){
-            erroValidacaoComMensagem(res, 'Usuário não encontrado' )
-            return usuario
+            throw new Error('Usuário não encontrado' )
         }
         
         return usuario
     }
 
-    async atualizarUsuario(id: string, dados: any, res: Response) {
+    async atualizarUsuario(id: string, dados: any) {
         
         if (!id){
-            erroValidacaoComMensagem(res, 'O parâmetro id é obrigatório' )
-            return
+            throw new Error('O parâmetro id é obrigatório' )
         }
 
         dados.dataAlteracao = Date()
         const usuario = await usuarioRepository.atualizar(id, dados)
 
-        if (!usuario){
-            erroValidacaoComMensagem(res, 'Erro ao atualizar usuário' )
-            return usuario
-        }
-
-        return usuario
     }
 
-    async deletarUsuario(id: string, res: Response) {
+    async deletarUsuario(id: string) {
 
         if (!id){
-            erroValidacaoComMensagem(res, 'O parâmetro id é obrigatório' )
+            throw new Error('O parâmetro id é obrigatório' )
         }
 
         await usuarioRepository.deletar(id)

@@ -1,59 +1,51 @@
 import { erroValidacaoComMensagem } from '../errors/errorHandling'
 import { CategoriaRepository } from '../repositories/categoriaRepository'
 import { UsuarioService } from './usuarioService'
-import type { Response } from 'express'
 
 const categoriaRepository = new CategoriaRepository()
 const usuarioService = new UsuarioService()
 
 export class CategoriaService {
 
-    async criarCategoria(nome: string, usuarioId: string, res: Response) {
+    async criarCategoria(nome: string, usuarioId: string): Promise<void> {
 
-        const usuario = usuarioService.obterUsuarioPorId(usuarioId, res)
-        if(!usuario)
-            return 
+        try {
+            if (!nome || !usuarioId)
+                throw new Error('Nome e ID do usuário são obrigatórios para criar uma categoria')
 
-        if (!nome || !usuarioId){
-            erroValidacaoComMensagem(res, 'Nome e usuário são obrigatórios')
-            return
+            await usuarioService.obterUsuarioPorId(usuarioId)
+            await categoriaRepository.criar({nome, usuarioId})
+        } catch (error) {
+            throw new Error('Erro ao criar categoria')
         }
-        
-        return await categoriaRepository.criar({nome, usuarioId})
+
     }
+        
 
     async listaDeCategorias() {
         return await categoriaRepository.listarTodos()
     }
 
-    async obterCategoriaPorId(id: string, res: Response) {
+    async obterCategoriaPorId(id: string) {
         const categoria = await categoriaRepository.buscarPorId(id)
         if (!categoria){
-            erroValidacaoComMensagem(res, 'Categoria não encontrada')
-            return {}
+            throw new Error('Categoria não encontrada')
         }
 
         return categoria
     }
 
-    async atualizarCategoria(id: string, dados: any, res: Response) {
+    async atualizarCategoria(id: string, dados: any) {
         
         dados.dataAlteracao = Date()
-        const categoria = await categoriaRepository.atualizar(id, dados)
-        
-        if (!categoria){
-            erroValidacaoComMensagem(res, 'Erro ao atualizar categoria')
-            return
-        }
+        await categoriaRepository.atualizar(id, dados)
 
-        return categoria
     }
 
-    async deletarCategoria(id: string, res: Response) {
+    async deletarCategoria(id: string) {
 
-        const categoria = await this.obterCategoriaPorId(id, res) as {usuarioId: 0}
-
-        const usuario = usuarioService.obterUsuarioPorId(String(categoria.usuarioId), res)
+        const categoria = await this.obterCategoriaPorId(id)
+        const usuario = usuarioService.obterUsuarioPorId(String(categoria.usuarioId))
 
         if (!usuario)
             return

@@ -1,14 +1,18 @@
 import { Tarefa } from '../models/tarefas'
+import { TarefaModelo } from '../models/tarefasModelo'
 
 export class TarefaRepository {
 
     async criar(dados: any) {
-
         const tarefa = new Tarefa(dados)
-        return await tarefa.save()
+        await tarefa.save()
     }
 
-    async listar(filtro: any, limite: number, pagina: number, ordenar: string, skip: number) {
+    async listar(filtro: any,
+                 limite: number,
+                 pagina: number,
+                 ordenar: string,
+                 skip: number): Promise<TarefaModelo[] | any> {
 
         return await Tarefa.find(filtro)
         .limit(limite)
@@ -16,18 +20,15 @@ export class TarefaRepository {
         .sort({createdAt: ordenar === 'desc' ? -1 : 1})
     }
 
-    async buscarPorId(id: string) {
-
+    async buscarPorId(id: string): Promise<TarefaModelo | null> {
         return await Tarefa.findById(id)
     }
 
     async atualizar(id: string, dados: any) {
-
-        return await Tarefa.findByIdAndUpdate(id, dados, {new: true})
+        await Tarefa.findByIdAndUpdate(id, dados, {new: true})
     }
 
     async deletar(id: string) {
-
-        return await Tarefa.findByIdAndDelete(id)
+        await Tarefa.findByIdAndDelete(id)
     }
 }
