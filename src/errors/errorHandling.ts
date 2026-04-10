@@ -1,15 +1,10 @@
-import {Response} from 'express'
+export class ErroHandling extends Error{
+    statusCode: number
+    constructor(message: string, statusCode: number){
+        super(message)
+        this.statusCode = statusCode
+        this.name = this.constructor.name
 
-function erroValidacaoComMensagem(res: Response, error: any) {
-    res.status(400).json( { error: error })
+        Error.captureStackTrace(this, this.constructor)
+    }
 }
-
-function tratarErroParaJson(error: any) {
-    
-    return { erro: error.mensage }
-
-}
-
-export {erroValidacaoComMensagem, tratarErroParaJson}
-
-

@@ -1,54 +1,81 @@
-import { erroValidacaoComMensagem } from '../errors/errorHandling'
+import { ErroValidacao } from '../errors/errorValIdacao'
+import { ICategoria } from '../models/categoriaModelo'
 import { CategoriaRepository } from '../repositories/categoriaRepository'
-import { UsuarioService } from './usuarioService'
+import { AutorizacaoService } from './autorizacaoServices'
 
 const categoriaRepository = new CategoriaRepository()
-const usuarioService = new UsuarioService()
+const autorizacaoService = new AutorizacaoService()
 
 export class CategoriaService {
 
-    async criarCategoria(nome: string, usuarioId: string): Promise<void> {
+    async criarCategoria(nome: string, usuarioId: string, tokenId: string): Promise<ICategoria> {
+
+        if (!nome || !usuarioId)
+            throw new ErroValidacao('Nome e ID do usuário são obrigatórios para criar uma categoria')
+
+        await autorizacaoService.buscarUsuarioAutorizado(tokenId, usuarioId)
+        const categoria = await categoriaRepository.buscarPorNome(nome, usuarioId)
+
+        if (categoria) {
+            throw new ErroValidacao('Categoria já existe para este usuário')
+        }
 
         try {
-            if (!nome || !usuarioId)
-                throw new Error('Nome e ID do usuário são obrigatórios para criar uma categoria')
 
-            await usuarioService.obterUsuarioPorId(usuarioId)
-            await categoriaRepository.criar({nome, usuarioId})
+            const novaCategoria = await categoriaRepository.criar({ nome, usuarioId })
+
+            if (novaCategoria && novaCategoria.id) {
+                return await categoriaRepository.buscarPorId(novaCategoria.id) as ICategoria
+            }
+
+            throw new ErroValidacao('Erro ao criar categoria')
+        } catch {
+            throw new ErroValidacao('Erro ao criar categoria')
+        }
+
+    }
+
+    async listaDeCategorias(tokenId: string) {
+        try {
+            return await categoriaRepository.listarTodos(tokenId)
         } catch (error) {
-            throw new Error('Erro ao criar categoria')
+            throw new ErroValidacao('Erro ao listar categorias')
         }
-
-    }
-        
-
-    async listaDeCategorias() {
-        return await categoriaRepository.listarTodos()
     }
 
-    async obterCategoriaPorId(id: string) {
+    async obterCategoriaPorId(id: string, tokenId: string): Promise<ICategoria | null> {
+
         const categoria = await categoriaRepository.buscarPorId(id)
-        if (!categoria){
-            throw new Error('Categoria não encontrada')
+        await autorizacaoService.buscarCategoriaAutorizada(tokenId, id)
+
+        try {
+            return categoria
+        } catch {
+            throw new ErroValidacao('Categoria não encontrada')
+        }
+    }
+
+    async atualizarCategoria(id: string, dados: any, tokenId: string) {
+
+        await autorizacaoService.buscarCategoriaAutorizada(tokenId, id)
+        dados.dataAlteracao = Date()
+
+        try {
+            await categoriaRepository.atualizar(id, dados)
+        } catch {
+            throw new ErroValidacao('Erro ao atualizar categoria')
         }
 
-        return categoria
     }
 
-    async atualizarCategoria(id: string, dados: any) {
-        
-        dados.dataAlteracao = Date()
-        await categoriaRepository.atualizar(id, dados)
+    async deletarCategoria(id: string, tokenId: string) {
 
+        await autorizacaoService.buscarCategoriaAutorizada(tokenId, id)
+        try {
+            await categoriaRepository.deletar(id)
+        } catch {
+            throw new ErroValidacao('Erro ao deletar categoria')
+        }
     }
 
-    async deletarCategoria(id: string) {
-
-        const categoria = await this.obterCategoriaPorId(id)
-        const usuario = usuarioService.obterUsuarioPorId(String(categoria.usuarioId))
-
-        if (!usuario)
-            return
-        await categoriaRepository.deletar(id)
-    }
 }

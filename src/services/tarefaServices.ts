@@ -1,19 +1,33 @@
-import { erroValidacaoComMensagem } from '../errors/errorHandling'
+import { ErroValidacao } from '../errors/errorValIdacao'
+import { ITarefa } from '../models/tarefasModelo'
 import { TarefaRepository } from '../repositories/tarefaRepository'
-import { UsuarioService } from './usuarioService'
+import { AutorizacaoService } from './autorizacaoServices'
 
+const autorizacaoService = new AutorizacaoService()
 const tarefaRepository = new TarefaRepository()
-const usuarioService = new UsuarioService()
 
 export class TarefaService {
 
-    async criarTarefa(dados: any) {
+    async criarTarefa(dados: any, tokenId: string): Promise<ITarefa> {
 
         if (!dados.titulo || !dados.usuarioId) {
-            throw new Error('Título e usuário são obrigatórios' )
+            throw new ErroValidacao('Título e usuário são obrigatórios' )
         }
-        
-        return await tarefaRepository.criar(dados)
+
+        await autorizacaoService.buscarUsuarioAutorizado(tokenId, dados.usuarioId)
+
+        try {
+            const novaTarefa = await tarefaRepository.criar(dados)
+            if (novaTarefa && novaTarefa.id) {
+                return await tarefaRepository.buscarPorId(novaTarefa.id)
+            }
+                throw new ErroValidacao('Erro ao criar tarefa')
+        } catch (error) {
+            if (error instanceof ErroValidacao) {
+                throw error
+            }
+            throw new ErroValidacao('Erro ao criar tarefa')
+        }
 
     }
 
@@ -23,55 +37,83 @@ export class TarefaService {
         const skip = (pagina - 1) * limite
         const filtro: any = {}
 
-        if (status) 
+        if (status)
             filtro.status = status
 
-        if (categoriaId) 
+        if (categoriaId)
             filtro.categoriaId = categoriaId
 
         return await tarefaRepository.listar(filtro, limite, pagina, ordenar, skip)
 
     }
 
-    async obterTarefaPorId(id: string) {
+    async obterTarefaPorId(id: string, tokenId: string): Promise<ITarefa> {
 
         if (!id) {
-            throw new Error('O parâmetro id é obrigatório' )
+            throw new ErroValidacao('O parâmetro id é obrigatório' )
         }
 
-        const tarefa = await tarefaRepository.buscarPorId(id)
+        try {
+            const tarefa = await tarefaRepository.buscarPorId(id)
+            await autorizacaoService.buscarUsuarioAutorizado(tokenId, tarefa.usuarioId)
 
-        if (!tarefa){
-            throw new Error('Tarefa não encontrada' )
+            if (!tarefa){
+                throw new ErroValidacao('Tarefa não encontrada' )
+            }
+
+            return tarefa
+        } catch (error) {
+            if (error instanceof ErroValidacao) {
+                throw error
+            }
+            throw new ErroValidacao('Erro ao obter tarefa' )
         }
-
-        return tarefa
     }
 
-    async atualizarTarefa(id: string, dados: any) {
+    async atualizarTarefa(id: string, dados: any, tokenId: string) {
+
+        await autorizacaoService.buscarTarefaAutorizada(tokenId, id)
 
         if (!id) {
-            throw new Error('O parâmetro id é obrigatório' )
+            throw new ErroValidacao('O parâmetro id é obrigatório' )
         }
 
         dados.dataAlteracao = Date()
-        await tarefaRepository.atualizar(id, dados)
+        try {
+            await tarefaRepository.atualizar(id, dados)
+        } catch {
+            throw new ErroValidacao('Erro ao atualizar tarefa')
+        }
      }
 
-    async deletarTarefa(id: string) {
+    async deletarTarefa(id: string, tokenId: string) {
 
-        const tarefa = await this.obterTarefaPorId(id) as any
-        usuarioService.obterUsuarioPorId(String(tarefa.usuarioId))
-        await tarefaRepository.deletar(id)
+        await autorizacaoService.buscarTarefaAutorizada(tokenId, id)
+
+        try {
+            await tarefaRepository.deletar(id)
+        } catch {
+            throw new ErroValidacao('Erro ao deletar tarefa')
+        }
 
     }
 
-    async atualizarStatus(id: string, status: string) {
+    async atualizarStatus(id: string, status: string, tokenId: string) {
 
-        if (!id){
-            throw new Error('O parâmetro id é obrigatório' )
+        await autorizacaoService.buscarTarefaAutorizada(tokenId, id)
+
+        if (!(status == 'pendente' || status == 'concluída' || status == 'em andamento')) {
+            throw new ErroValidacao('Status inválido. Use "pendente", "concluida" ou "em andamento".' )
         }
-        await tarefaRepository.atualizar(id, { status, dataAlteracao: Date() })
+
+        try {
+            await tarefaRepository.atualizar(id, { status, dataAlteracao: Date() })
+        } catch (error) {
+            if (error instanceof ErroValidacao) {
+                throw error
+            }
+            throw new ErroValidacao('Erro ao atualizar status da tarefa')
+        }
 
     }
 }
