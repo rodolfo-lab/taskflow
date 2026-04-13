@@ -3,9 +3,11 @@ import { UsuarioRepository } from '../repositories/usuarioRepository'
 import { IUsuario } from '../models/usuarioModelo'
 import { ErroValidacao } from '../errors/errorValIdacao'
 import { AutorizacaoService } from './autorizacaoServices'
+import { CategoriaRepository } from '../repositories/categoriaRepository'
 
 const usuarioRepository = new UsuarioRepository()
 const autorizacaoService = new AutorizacaoService()
+const categoriaRepository = new CategoriaRepository()
 
 export class UsuarioService {
 
@@ -101,9 +103,16 @@ export class UsuarioService {
 
         await autorizacaoService.buscarUsuarioAutorizado(id, tokenId)
 
+        if (await categoriaRepository.buscarPorIdUsuario(id)) {
+            throw new ErroValidacao('falha ao deletar usuário, existem categorias associadas' )
+        }
+
         try {
             await usuarioRepository.deletar(id)
-        } catch {
+        } catch (error) {
+            if (error instanceof ErroValidacao) {
+                throw error
+            }
             throw new ErroValidacao('Erro ao deletar usuário')
         }
     }

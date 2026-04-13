@@ -1,10 +1,12 @@
 import { ErroValidacao } from '../errors/errorValIdacao'
 import { ICategoria } from '../models/categoriaModelo'
 import { CategoriaRepository } from '../repositories/categoriaRepository'
+import { TarefaRepository } from '../repositories/tarefaRepository'
 import { AutorizacaoService } from './autorizacaoServices'
 
 const categoriaRepository = new CategoriaRepository()
 const autorizacaoService = new AutorizacaoService()
+const tarefaRepository = new TarefaRepository()
 
 export class CategoriaService {
 
@@ -71,9 +73,17 @@ export class CategoriaService {
     async deletarCategoria(id: string, tokenId: string) {
 
         await autorizacaoService.buscarCategoriaAutorizada(tokenId, id)
+
+        if (await tarefaRepository.buscarPorIdCategoria(id)) {
+            throw new ErroValidacao('falha ao deletar categoria, existem tarefas associadas' )
+        }
+
         try {
             await categoriaRepository.deletar(id)
-        } catch {
+        } catch (error) {
+            if (error instanceof ErroValidacao) {
+                throw error
+            }
             throw new ErroValidacao('Erro ao deletar categoria')
         }
     }

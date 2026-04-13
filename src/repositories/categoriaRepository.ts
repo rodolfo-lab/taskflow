@@ -16,6 +16,10 @@ export class CategoriaRepository {
         return await Categoria.findById(id, '-__v')
     }
 
+    async buscarPorIdUsuario(id: string): Promise<ICategoria[] | unknown> {
+        return await Categoria.find({ usuarioId: id }, '-__v') as ICategoria[] | unknown
+    }
+
     async atualizar(id: string, dados: any) {
         await Categoria.findByIdAndUpdate(id, dados, {new: true})
     }

@@ -25,6 +25,11 @@ export class TarefaRepository {
         return await Tarefa.findById(id, '-__v') as ITarefa
     }
 
+    async buscarPorIdCategoria(id: string): Promise<ITarefa | unknown> {
+        return await Tarefa.find({categoriaId: id}, '-__v') as ITarefa | unknown
+    }
+
+
     async atualizar(id: string, dados: any) {
         await Tarefa.findByIdAndUpdate(id, dados, {new: true})
     }
